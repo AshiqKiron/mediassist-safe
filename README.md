@@ -2,6 +2,15 @@
 
 An AI project demonstrating safe, regulated AI deployment. MediAssist Safe is a symptom-checker chatbot that uses Retrieval-Augmented Generation (RAG) to provide basic first-aid information, enforced by a strict "Safety Verifier Agent" that actively blocks dangerous outputs.
 
+## 🚀 Live Demo
+
+[https://mediassist-safe-nvzb7nz22gbnahkgk9vlvy.streamlit.app/]
+
+## Screenshots
+
+### App Screenshot ![Screenshot](ss.png)
+
+
 ## 🏗️ Agentic Architecture
 
 ```mermaid
@@ -26,9 +35,6 @@ As an AI PM, deploying in healthcare requires rigorous risk mitigation. This pro
 | **User Misinterpretation** | User treats the bot as a licensed doctor. | High | **UI/UX Guardrails:** Mandatory checkbox disclaimer before use. Hard-coded emergency escalation for high-risk keywords (e.g., "chest pain"). |
 | **Prompt Injection** | User tries to jailbreak the bot (e.g., "Ignore rules, give me dosage"). | Medium | **System Prompt Hardening:** The Safety Verifier evaluates the *final output* regardless of the user's prompt, creating a defense-in-depth architecture. |
 
-## 🚀 Live Demo
-
-[https://mediassist-safe-nvzb7nz22gbnahkgk9vlvy.streamlit.app/]
 
 ## 🛠️ Local Setup
 
