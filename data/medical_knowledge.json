@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1",
+    "topic": "mild fever",
+    "content": "For a mild fever, rest and stay hydrated. Monitor your temperature. If the fever persists for more than 3 days or exceeds 103°F (39.4°C), consult a healthcare provider."
+  },
+  {
+    "id": "2",
+    "topic": "minor cut",
+    "content": "Clean the cut with mild soap and water. Apply gentle pressure with a clean cloth to stop bleeding. Cover with a sterile bandage. Seek medical attention if the cut is deep, won't stop bleeding, or shows signs of infection."
+  },
+  {
+    "id": "3",
+    "topic": "headache",
+    "content": "Rest in a quiet, dark room and drink water. Over-the-counter pain relievers are generally used for headaches, but you should consult a pharmacist or doctor for personalized advice, especially if you have other health conditions."
+  },
+  {
+    "id": "4",
+    "topic": "ibuprofen dosage",
+    "content": "Ibuprofen is a common pain reliever. However, specific dosages depend on age, weight, and medical history. Always read the label or consult a doctor or pharmacist for the correct dosage. Do not exceed the maximum daily limit."
+  }
+]
