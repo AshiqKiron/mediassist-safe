@@ -1,10 +1,7 @@
 import streamlit as st
 import json
 from langchain_groq import ChatGroq
-from langchain_community.vectorstores import FAISS
-from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.embeddings import FakeEmbeddings # Using fake embeddings for speed/demo since we have small data
 
 # --- 1. SETUP & INITIALIZATION ---
 st.set_page_config(page_title="MediAssist Safe", page_icon="🏥", layout="centered")
@@ -12,35 +9,13 @@ st.set_page_config(page_title="MediAssist Safe", page_icon="🏥", layout="cente
 # Initialize Groq LLM
 llm = ChatGroq(temperature=0.0, model_name="llama3-70b-8192", groq_api_key=st.secrets["GROQ_API"])
 
-# --- 2. RAG DATABASE SETUP (Using FAISS) ---
-@st.cache_resource
-def load_knowledge_base():
+# --- 2. LOAD DATA ---
+@st.cache_data
+def load_knowledge_data():
     with open("data/medical_knowledge.json", "r") as f:
-        data = json.load(f)
-    
-    docs = [Document(page_content=item["content"], metadata={"topic": item["topic"]}) for item in data]
-    
-    # For a demo with a small dataset, we can use a simple keyword-based retrieval or 
-    # a lightweight embedding. To avoid heavy embedding model downloads on Streamlit Cloud,
-    # we'll use a simple trick: FAISS with a dummy embedding for structure, 
-    # but in a real app, you'd use HuggingFaceEmbeddings.
-    # NOTE: For this specific demo to be robust on free cloud, let's use a simple similarity search
-    # by converting text to a basic vector representation or just using the built-in FAISS from_texts.
-    
-    try:
-        # Attempt to use a real lightweight embedding if available, otherwise fallback
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        vectorstore = FAISS.from_documents(docs, embeddings)
-    except Exception:
-        # Fallback for environments where downloading models is restricted/slow
-        # We will use a simple "keyword" match logic for the demo if FAISS fails to init with embeddings
-        st.warning("Using simplified search mode due to environment constraints.")
-        return None 
+        return json.load(f)
 
-    return vectorstore
-
-vectorstore = load_knowledge_base()
+medical_data = load_knowledge_data()
 
 # --- 3. AGENTIC WORKFLOW FUNCTIONS ---
 
@@ -78,6 +53,27 @@ def generate_safe_response(query: str, context: str) -> str:
     chain = prompt | llm
     return chain.invoke({"context": context, "query": query}).content
 
+def simple_keyword_search(query: str, data: list, k: int = 2) -> str:
+    """A simple fallback search if vector stores fail."""
+    query_words = set(query.lower().split())
+    scored_items = []
+    for item in data:
+        topic_words = set(item["topic"].lower().split())
+        content_words = set(item["content"].lower().split())
+        # Score based on overlap with topic and content
+        score = len(query_words.intersection(topic_words)) * 2 + len(query_words.intersection(content_words))
+        if score > 0:
+            scored_items.append((score, item["content"]))
+    
+    # Sort by score descending
+    scored_items.sort(key=lambda x: x[0], reverse=True)
+    
+    # Return top k results
+    results = [item[1] for item in scored_items[:k]]
+    if not results:
+        return "No specific information found in the database. Please consult a healthcare provider."
+    return "\n\n".join(results)
+
 # --- 4. STREAMLIT UI ---
 st.title("🏥 MediAssist Safe")
 st.markdown("*AI-powered symptom checking with strict safety guardrails.*")
@@ -102,4 +98,27 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Describe your symptoms or ask a general health question..."):
-    st.session
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Triage and Safety Verification in progress..."):
+            urgency = router_agent(prompt)
+            
+            if urgency == "EMERGENCY":
+                response = "🚨 **EMERGENCY DETECTED** 🚨\n\nBased on your description, this may be a medical emergency. Please stop using this app and **call emergency services (e.g., 911) or go to the nearest emergency room immediately.**"
+            else:
+                # Use simple keyword search for maximum reliability on free cloud
+                context = simple_keyword_search(prompt, medical_data, k=2)
+                
+                draft_answer = generate_safe_response(prompt, context)
+                is_safe = safety_verifier(prompt, context, draft_answer)
+                
+                if not is_safe:
+                    response = "🛑 **Safety Guardrail Triggered**\n\nI cannot provide specific dosages, definitive diagnoses, or individualized treatment plans. Please consult a licensed pharmacist or healthcare provider for personalized medical advice."
+                else:
+                    response = draft_answer
+
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
